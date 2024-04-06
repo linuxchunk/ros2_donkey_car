@@ -4,7 +4,7 @@
 When you launch the program, you can now choose your I²C bus. Here's an example:
 
 ```bash
-ros2 run i2c_pwm_board controller 1 # The "1" tells the program to open the i2c-1/ bus, but you can change it to your desired bus.
+ros2 run i2c_pwm_board controller 7 # The "7" tells the program to open the i2c-1/ bus, but you can change it to your desired bus.
 ```
 This will be particularly useful for opening several buses between programs, and for easily adapting to the RPi Zero, which has an `i2c-0/` bus by default.
 
@@ -15,7 +15,7 @@ This will be particularly useful for opening several buses between programs, and
 ros2 service call /set_pwm_frequency i2c_pwm_board_msgs/srv/IntValue "{value: 50}"
 
 # Configuring two servos.
-ros2 service call /config_servos i2c_pwm_board_msgs/srv/ServosConfig "servos: [{servo: 1, center: 333, range: 100, direction: -1},{servo: 2, center: 336, range: 108, direction: 1}]"
+ros2 service call /config_servos i2c_pwm_board_msgs/srv/ServosConfig "servos: [{servo: 1, center: 127, range: 100, direction: -1},{servo: 2, center: 336, range: 108, direction: 1}]"
 
 # Configuring those two servos on differential mode.
 ros2 service call /config_drive_mode i2c_pwm_board_msgs/srv/DriveMode "{mode: differential, rpm: 56.0, radius: 0.0055, track: 0.015, scale: 1.0,servos: [{servo: 1, position: 1}, {servo: 2, position: 2}]}"
@@ -45,7 +45,7 @@ You can clone and run this package by copying the command below :
 ### Testing I²C
 Now when you log in you can type the following command to see all the connected devices
 ```bash 
-sudo i2cdetect -y 1 # Or 0, depends on the device you use.
+sudo i2cdetect -y -r 7 # Or 1, depends on the device you use.
 ```
 
 ### Install automatically

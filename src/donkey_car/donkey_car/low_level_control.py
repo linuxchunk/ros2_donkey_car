@@ -6,10 +6,9 @@ installed
 """
 import rclpy
 from rclpy.node import Node
-from i2cpwm_board_msgs.msg import Servo, ServoArray
+from i2c_pwm_board_msgs.msg import Servo, ServoArray
 from geometry_msgs.msg import Twist
 import time
-
 
 class ServoConvert():
     def __init__(self, id=1, center_value=333, range=90, direction=1):
@@ -31,10 +30,9 @@ class ServoConvert():
         print(self.id, self.value_out)
         return self.value_out
 
-
 class DkLowLevelCtrl(Node):
     def __init__(self):
-        super().__init__()
+        super().__init__("low_level_controller")
         self.get_logger().info("Setting Up the Node...")
 
         self.actuators = {}
@@ -61,6 +59,8 @@ class DkLowLevelCtrl(Node):
         self.get_logger().info("Initialization complete")
 
     def set_actuators_from_cmdvel(self, message):
+
+        # self.get_logger().info(message)
         """
         Get a message from cmd_vel, assuming a maximum input of 1
         """
@@ -68,6 +68,7 @@ class DkLowLevelCtrl(Node):
         self._last_time_cmd_rcv = time.time()
 
         #-- Convert vel into servo values
+        self.get_logger().info(f"{message.linear.x} {message.angular.z}")
         self.actuators['throttle'].get_value_out(message.linear.x)
         self.actuators['steering'].get_value_out(message.angular.z)
         self.get_logger().info("Got a command v = %2.1f  s = %2.1f" % (message.linear.x, message.angular.z))
@@ -83,7 +84,7 @@ class DkLowLevelCtrl(Node):
     def send_servo_msg(self):
         for actuator_name, servo_obj in self.actuators.items():
             self._servo_msg.servos[servo_obj.id - 1].servo = servo_obj.id
-            self._servo_msg.servos[servo_obj.id - 1].value = servo_obj.value_out
+            self._servo_msg.servos[servo_obj.id - 1].value = float(servo_obj.value_out)
             self.get_logger().info("Sending to %s command %d" % (actuator_name, servo_obj.value_out))
 
         self.ros_pub_servo_array.publish(self._servo_msg)
@@ -108,7 +109,7 @@ class DkLowLevelCtrl(Node):
 def main(args=None):
     rclpy.init(args=args)
     dk_llc = DkLowLevelCtrl()
-    dk_llc.run()
+    rclpy.spin(dk_llc)
     rclpy.shutdown()
 
 if __name__ == "__main__":
