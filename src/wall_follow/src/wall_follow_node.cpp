@@ -123,11 +123,11 @@ private:
         
         // We go slower if we need to a large steering angle correction
         if (std::abs(drive_msg.drive.steering_angle) >= this->to_radians(0) && std::abs(drive_msg.drive.steering_angle) < this->to_radians(10)) {
-            drive_msg.drive.speed = 1.5;
+            drive_msg.drive.speed = 0.15;
         } else if (std::abs(drive_msg.drive.steering_angle) >= this->to_radians(10) && std::abs(drive_msg.drive.steering_angle) < this->to_radians(20)) {
-            drive_msg.drive.speed = 1.0;
+            drive_msg.drive.speed = 0.1;
         } else {
-            drive_msg.drive.speed = 0.5;
+            drive_msg.drive.speed = 0.05;
         }
         this->publisher_->publish(drive_msg);
     }

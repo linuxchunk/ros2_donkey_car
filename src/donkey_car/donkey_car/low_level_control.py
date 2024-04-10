@@ -7,7 +7,8 @@ installed
 import rclpy
 from rclpy.node import Node
 from i2c_pwm_board_msgs.msg import Servo, ServoArray
-from geometry_msgs.msg import Twist
+# from geometry_msgs.msg import Twist
+from ackermann_msgs.msg import AckermannDriveStamped
 import time
 
 class ServoConvert():
@@ -24,16 +25,28 @@ class ServoConvert():
         self._sf = 1.0 / self._half_range
 
     def get_value_out(self, value_in):
+        if value_in > 1:
+            value_in = 1
+
+        if value_in < -1:
+            value_in = -1
+        
         #--- value is in [-1, 1]
         self.value = value_in
         self.value_out = int(self._dir * value_in * self._half_range + self._center)
+
+   
+
         print(self.id, self.value_out)
         return self.value_out
 
 class DkLowLevelCtrl(Node):
+
     def __init__(self):
-        super().__init__("low_level_controller")
+        super().__init__("drive_controller")
         self.get_logger().info("Setting Up the Node...")
+        self.max_speed = 1.0
+        self.max_steering = 1.0
 
         self.actuators = {}
         self.actuators['throttle'] = ServoConvert(id=1)
@@ -48,8 +61,8 @@ class DkLowLevelCtrl(Node):
         self.ros_pub_servo_array = self.create_publisher(ServoArray, "/servos_absolute", 1)
         self.get_logger().info("> Publisher correctly initialized")
 
-        #--- Create the Subscriber to Twist commands
-        self.ros_sub_twist = self.create_subscription(Twist, "/cmd_vel", self.set_actuators_from_cmdvel, 1)
+        #--- Create the Subscriber to Ackerman Drive Stamped commands
+        self.ros_sub_drive = self.create_subscription(AckermannDriveStamped, "/drive", self.set_actuators_from_ads, 1)
         self.get_logger().info("> Subscriber correctly initialized")
 
         #--- Get the last time we got a command
@@ -58,20 +71,33 @@ class DkLowLevelCtrl(Node):
 
         self.get_logger().info("Initialization complete")
 
-    def set_actuators_from_cmdvel(self, message):
+    # def set_actuators_from_cmdvel(self, message):
 
-        # self.get_logger().info(message)
-        """
-        Get a message from cmd_vel, assuming a maximum input of 1
-        """
-        #-- Save the time
+    #     # self.get_logger().info(message)
+    #     """
+    #     Get a message from cmd_vel, assuming a maximum input of 1
+    #     """
+    #     #-- Save the time
+    #     self._last_time_cmd_rcv = time.time()
+
+    #     #-- Convert vel into servo values
+    #     self.get_logger().info(f"{message.linear.x} {message.angular.z}")
+    #     self.actuators['throttle'].get_value_out(message.linear.x)
+    #     self.actuators['steering'].get_value_out(message.angular.z)
+    #     self.get_logger().info("Got a command v = %2.1f  s = %2.1f" % (message.linear.x, message.angular.z))
+    #     self.send_servo_msg()
+
+    def set_actuators_from_ads(self, message):
+
+        self.get_logger().info(str(message))
+      
         self._last_time_cmd_rcv = time.time()
 
         #-- Convert vel into servo values
-        self.get_logger().info(f"{message.linear.x} {message.angular.z}")
-        self.actuators['throttle'].get_value_out(message.linear.x)
-        self.actuators['steering'].get_value_out(message.angular.z)
-        self.get_logger().info("Got a command v = %2.1f  s = %2.1f" % (message.linear.x, message.angular.z))
+        self.get_logger().info(f"{message.drive.speed} {message.drive.steering_angle}")
+        self.actuators['throttle'].get_value_out(float(message.drive.speed) / self.max_speed)
+        self.actuators['steering'].get_value_out(float(message.drive.steering_angle) / self.max_steering)
+        self.get_logger().info("Got a command v = %2.1f  s = %2.1f" % (message.drive.speed, message.drive.steering_angle))
         self.send_servo_msg()
 
     def set_actuators_idle(self):
@@ -85,6 +111,8 @@ class DkLowLevelCtrl(Node):
         for actuator_name, servo_obj in self.actuators.items():
             self._servo_msg.servos[servo_obj.id - 1].servo = servo_obj.id
             self._servo_msg.servos[servo_obj.id - 1].value = float(servo_obj.value_out)
+            if self._servo_msg.servos[servo_obj.id - 1] == 0:
+                self._servo_msg.servos[servo_obj.id - 1].value = float(333)
             self.get_logger().info("Sending to %s command %d" % (actuator_name, servo_obj.value_out))
 
         self.ros_pub_servo_array.publish(self._servo_msg)
