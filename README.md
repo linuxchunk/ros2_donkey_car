@@ -56,7 +56,7 @@ Simply just copy & paste this code :
 ```sh
 cd install_script/
 chmod +x install_dependencies.sh
-./install_dependencies
+sudo ./install_dependencies.sh
 ```
 # Build it 
 
